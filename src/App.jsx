@@ -102,6 +102,13 @@ export default function App() {
 		return () => setIsLayoutReady(false);
 	}, []);
 
+	// Configuration de l'utilisateur
+	const currentUser = {
+		id: 'user-123',
+		name: 'John Doe',        // Remplacez par le nom réel de l'utilisateur
+		// avatar: 'url-avatar'     // Optionnel
+	  };
+
 	const editorConfig = {
 		toolbar: {
 			items: [
@@ -203,11 +210,17 @@ export default function App() {
 			webSocketUrl: CLOUD_SERVICES_WEBSOCKET_URL
 		},
 		collaboration: {
-			channelId: UNIQUE_CHANNEL_PER_DOCUMENT
+			channelId: UNIQUE_CHANNEL_PER_DOCUMENT,
+			user: currentUser,
+			// user: `Gilles ${Math.floor(Math.random() * 1000)}`
 		},
 		comments: {
 			editorConfig: {
 				extraPlugins: [Autoformat, Bold, Italic, List]
+			},
+			user: currentUser,
+			trackChanges: {
+				userName: currentUser.name,
 			}
 		},
 		heading: {
@@ -298,12 +311,19 @@ export default function App() {
 		presenceList: {
 			container: editorPresenceRef.current
 		},
+		// Configuration pour le suivi des modifications
+		trackChanges: {
+			user: currentUser,
+			userName: currentUser.name
+		},
 		revisionHistory: {
 			editorContainer: editorContainerRef.current,
 			viewerContainer: editorRevisionHistoryRef.current,
 			viewerEditorElement: editorRevisionHistoryEditorRef.current,
 			viewerSidebarContainer: editorRevisionHistorySidebarRef.current,
-			resumeUnsavedRevision: true
+			resumeUnsavedRevision: true,
+			user: currentUser,
+	        userName: currentUser.name
 		},
 		sidebar: {
 			container: editorAnnotationsRef.current
