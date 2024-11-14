@@ -323,7 +323,174 @@ class TrackChangesIntegration extends Plugin {
  *
  * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/revision-history/revision-history-integration.html.
  */
-class RevisionHistoryIntegration extends Plugin {}
+// A plugin that introduces the adapter.
+class RevisionHistoryIntegration extends Plugin {
+    static get pluginName() {
+        return 'RevisionHistoryIntegration';
+    }
+
+    static get requires() {
+        return [ 'RevisionHistory' ];
+    }
+
+    async init() {
+        const revisionHistory = this.editor.plugins.get( 'RevisionHistory' );
+
+        revisionHistory.adapter = {
+            getRevision: ( { revisionId } ) => {
+                return this._findRevision( revisionId );
+            },
+            updateRevisions: revisionsData => {
+                const documentData = this.editor.getData();
+
+                // This should be an asynchronous request to your database
+                // that saves `revisionsData` and `documentData`.
+                //
+                // The document data should be saved each time a revision is saved.
+                //
+                // `revisionsData` is an array with objects,
+                // where each object contains updated and new revisions.
+                //
+                // See the API reference for `RevisionHistoryAdapter` to learn
+                // how to correctly integrate the feature with your application.
+                //
+                return Promise.resolve();
+            }
+        };
+
+        // Add the revisions data for existing revisions.
+        const revisionsData = await this._fetchRevisionsData();
+
+        for ( const revisionData of revisionsData ) {
+            revisionHistory.addRevisionData( revisionData );
+        }
+    }
+
+    async _findRevision( revisionId ) {
+        // Get the revision data based on its ID.
+        // This should be an asynchronous request to your database.
+        return Promise.resolve( revisions.find( revision => revision.id === revisionId ) );
+    }
+
+    async _fetchRevisionsData() {
+        // Get a list of all revisions.
+        // This should be an asynchronous call to your database.
+        //
+        // Note that the revision list should not contain the `diffData` property.
+        // The `diffData` property may be big and will be fetched on demand by `adapter.getRevision()`.
+        return Promise.resolve(revisions.map(revision => ({ ...revision, diffData: undefined })));
+    }
+}
+
+// Create a new plugin that will handle the autosave logic.
+class RevisionHistoryAutosaveIntegration extends Plugin {
+    init() {
+        this._saveAfter = 10; // Create a new revision after 100 saves.
+        this._autosaveCount = 1; // Current autosave counter.
+        this._lastCreatedAt = null; // Revision `createdAt` value, when the revision was last autosaved.
+    }
+
+    async autosave() {
+        const revisionTracker = this.editor.plugins.get( 'RevisionTracker' );
+        const currentRevision = revisionTracker.currentRevision;
+
+        if ( currentRevision.createdAt > this._lastCreatedAt ) {
+            // Revision was saved or updated in the meantime by a different source (not autosave).
+            // Reset the counter.
+            this._autosaveCount = 1;
+        }
+
+        if ( this._autosaveCount === this._saveAfter ) {
+            // We reached the count. Save all changes as a new revision. Reset the counter.
+            await revisionTracker.saveRevision();
+
+            this._autosaveCount = 1;
+            this._lastCreatedAt = currentRevision.createdAt;
+        } else {
+            // Try updating the "current revision" with the new document changes.
+            // If there are any new changes, the `createdAt` property will change its value.
+            // Do not raise the counter, if the revision has not been updated!
+            await revisionTracker.update();
+
+            if ( currentRevision.createdAt > this._lastCreatedAt ) {
+                this._autosaveCount++;
+                this._lastCreatedAt = currentRevision.createdAt;
+            }
+        }
+
+        return true;
+    }
+}
+
+// Revisions data will be available under a global variable `revisions`.
+const revisions = [
+    {
+        "id": "initial",
+        "name": "Initial revision",
+        "creatorId": "user-1",
+        "authorsIds": [ "user-1" ],
+        "diffData": {
+            "main": {
+                "insertions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ………… by and between The Lower Shelf, the “Publisher”, and …………, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him/herself and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]},{"name":"p","attributes":[],"children":["Publishing formats are enumerated in Appendix A."]}]',
+                "deletions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ………… by and between The Lower Shelf, the “Publisher”, and …………, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him/herself and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]},{"name":"p","attributes":[],"children":["Publishing formats are enumerated in Appendix A."]}]'
+            }
+        },
+        "createdAt": "2024-05-27T13:22:59.077Z",
+        "attributes": {},
+        "fromVersion": 1,
+        "toVersion": 1
+    },
+    {
+        "id": "e6f80e6be6ee6057fd5a449ab13fba25d",
+        "name": "Updated with the actual data",
+        "creatorId": "user-1",
+        "authorsIds": [ "user-1" ],
+        "diffData": {
+            "main": {
+                "insertions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ",{"name":"revision-start","attributes":[["name","insertion:user-1:0"]],"children":[]},"1st",{"name":"revision-end","attributes":[["name","insertion:user-1:0"]],"children":[]}," ",{"name":"revision-start","attributes":[["name","insertion:user-1:1"]],"children":[]},"June 2020 ",{"name":"revision-end","attributes":[["name","insertion:user-1:1"]],"children":[]},"by and between The Lower Shelf, the “Publisher”, and ",{"name":"revision-start","attributes":[["name","insertion:user-1:2"]],"children":[]},"John Smith",{"name":"revision-end","attributes":[["name","insertion:user-1:2"]],"children":[]},", the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]',
+                "deletions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ",{"name":"revision-start","attributes":[["name","deletion:user-1:0"]],"children":[]},"…………",{"name":"revision-end","attributes":[["name","deletion:user-1:0"]],"children":[]}," by and between The Lower Shelf, the “Publisher”, and ",{"name":"revision-start","attributes":[["name","deletion:user-1:1"]],"children":[]},"…………",{"name":"revision-end","attributes":[["name","deletion:user-1:1"]],"children":[]},", the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him",{"name":"revision-start","attributes":[["name","deletion:user-1:2"]],"children":[]},"/herself",{"name":"revision-end","attributes":[["name","deletion:user-1:2"]],"children":[]}," and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature.",{"name":"revision-start","attributes":[["name","deletion:user-1:3"]],"children":[]}]},{"name":"p","attributes":[],"children":["Publishing formats are enumerated in Appendix A.",{"name":"revision-end","attributes":[["name","deletion:user-1:3"]],"children":[]}]}]'
+            }
+        },
+        "createdAt": "2024-05-27T13:23:52.553Z",
+        "attributes": {},
+        "fromVersion": 1,
+        "toVersion": 20
+    },
+    {
+        "id": "e6590c50ccbc86acacb7d27231ad32064",
+        "name": "Inserted logo",
+        "creatorId": "user-1",
+        "authorsIds": [ "user-1" ],
+        "diffData": {
+            "main": {
+                "insertions": '[{"name":"figure","attributes":[["data-revision-start-before","insertion:user-1:0"],["class","image"]],"children":[{"name":"img","attributes":[["src","https://ckeditor.com/docs/ckeditor5/latest/assets/img/revision-history-demo.png"]],"children":[]}]},{"name":"h1","attributes":[],"children":[{"name":"revision-end","attributes":[["name","insertion:user-1:0"]],"children":[]},"PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]',
+                "deletions": '[{"name":"h1","attributes":[["data-revision-start-before","deletion:user-1:0"]],"children":[{"name":"revision-end","attributes":[["name","deletion:user-1:0"]],"children":[]},"PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]'
+            }
+        },
+        "createdAt": "2024-05-27T13:26:39.252Z",
+        "attributes": {},
+        "fromVersion": 20,
+        "toVersion": 24
+    },
+    // An empty current revision.
+    {
+        "id": "egh91t5jccbi894cacxx7dz7t36aj3k021",
+        "name": null,
+        "creatorId": null,
+        "authorsIds": [],
+        "diffData": {
+            "main": {
+                "insertions": '[{"name":"figure","attributes":[["class","image"]],"children":[{"name":"img","attributes":[["src","https://ckeditor.com/docs/ckeditor5/latest/assets/img/revision-history-demo.png"]],"children":[]}]},{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]',
+                "deletions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]'
+            }
+        },
+        "createdAt": "2024-05-27T13:26:39.252Z",
+        "attributes": {},
+        "fromVersion": 24,
+        "toVersion": 24
+    }
+];
+
 
 // Application data will be available under a global variable `appData`.
 const appData = {
@@ -512,7 +679,12 @@ export default function App() {
 			Underline,
 			Undo
 		],
-		extraPlugins: [UsersIntegration, CommentsIntegration, TrackChangesIntegration, RevisionHistoryIntegration],
+		extraPlugins: [UsersIntegration, CommentsIntegration, TrackChangesIntegration, RevisionHistoryIntegration, RevisionHistoryAutosaveIntegration],
+		autosave: {
+            save: editor => {
+                return editor.plugins.get( RevisionHistoryAutosaveIntegration ).autosave();
+            }
+        },
 		balloonToolbar: ['comment', '|', 'bold', 'italic', '|', 'link', 'insertImage', '|', 'bulletedList', 'numberedList'],
 		comments: {
 			editorConfig: {
