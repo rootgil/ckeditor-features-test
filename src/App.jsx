@@ -3,6 +3,7 @@ import { CKEditor } from '@ckeditor/ckeditor5-react';
 
 import {
 	ClassicEditor,
+	Plugin,
 	AccessibilityHelp,
 	Autoformat,
 	AutoImage,
@@ -12,7 +13,6 @@ import {
 	Base64UploadAdapter,
 	BlockQuote,
 	Bold,
-	CloudServices,
 	Code,
 	CodeBlock,
 	Essentials,
@@ -38,7 +38,11 @@ import {
 	LinkImage,
 	List,
 	ListProperties,
+	Markdown,
+	MediaEmbed,
+	Mention,
 	Paragraph,
+	PasteFromOffice,
 	SelectAll,
 	SpecialCharacters,
 	SpecialCharactersArrows,
@@ -57,20 +61,7 @@ import {
 	Underline,
 	Undo
 } from 'ckeditor5';
-import {
-	Comments,
-	PresenceList,
-	RealTimeCollaborativeComments,
-	RealTimeCollaborativeEditing,
-	RealTimeCollaborativeRevisionHistory,
-	RealTimeCollaborativeTrackChanges,
-	RevisionHistory,
-	TrackChanges,
-	TrackChangesData
-} from 'ckeditor5-premium-features';
-
-import translations from 'ckeditor5/translations/fr.js';
-import premiumFeaturesTranslations from 'ckeditor5-premium-features/translations/fr.js';
+import { Comments, RevisionHistory, TrackChanges, TrackChangesData } from 'ckeditor5-premium-features';
 
 import 'ckeditor5/ckeditor5.css';
 import 'ckeditor5-premium-features/ckeditor5-premium-features.css';
@@ -82,12 +73,338 @@ import './App.css';
  * Instructions on how to obtain them: https://ckeditor.com/docs/trial/latest/guides/real-time/quick-start.html
  */
 const LICENSE_KEY = 'NlJqV3B3ZjNNa3pyNXZCS0pjWVBCNkFNUm95aHE2bkpDYkE0amw1eUtRMi9QOVhZcXZicFdjNGpvQmVBVFE9PS1NakF5TkRFeU1EUT0=';
-const UNIQUE_CHANNEL_PER_DOCUMENT = '1';
-const CLOUD_SERVICES_TOKEN_URL = 'https://122216.cke-cs.com/token/dev/4bbtFOjJjMPi7rPsCdV8ieVJGnQfx9igztFb?limit=10';
-const CLOUD_SERVICES_WEBSOCKET_URL = 'wss://122216.cke-cs.com/ws';
+
+/**
+ * The `UsersIntegration` lets you manage user data and permissions.
+ *
+ * This is an essential feature when many users work on the same document.
+ *
+ * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/users.html.
+ */
+class UsersIntegration extends Plugin {
+	static get requires() {
+		return ['Users'];
+	}
+
+	static get pluginName() {
+		return 'UsersIntegration';
+	}
+
+	init() {
+        const usersPlugin = this.editor.plugins.get( 'Users' );
+
+        // Load the users data.
+        for ( const user of appData.users ) {
+            usersPlugin.addUser( user );
+        }
+
+        // Set the current user.
+        usersPlugin.defineMe( appData.userId );
+    }
+}
+
+/**
+ * The `CommentsIntegration` lets you synchronize comments in the document with your data source (e.g. a database).
+ *
+ * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/comments/comments-integration.html.
+ */
+class CommentsIntegration extends Plugin {
+    static get requires() {
+        return [ 'CommentsRepository', 'UsersIntegration' ];
+    }
+
+    static get pluginName() {
+        return 'CommentsIntegration';
+    }
+
+    init() {
+        const commentsRepositoryPlugin = this.editor.plugins.get( 'CommentsRepository' );
+
+        // Set the adapter on the `CommentsRepository#adapter` property.
+        commentsRepositoryPlugin.adapter = {
+            addComment( data ) {
+                console.log( 'Comment added', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                // When the promise resolves with the comment data object, it
+                // will update the editor comment using the provided data.
+                return Promise.resolve( {
+                    createdAt: new Date()       // Should be set on the server side.
+                } );
+            },
+
+            updateComment( data ) {
+                console.log( 'Comment updated', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve();
+            },
+
+            removeComment( data ) {
+                console.log( 'Comment removed', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve();
+            },
+
+            addCommentThread( data ) {
+                console.log( 'Comment thread added', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve( {
+                    threadId: data.threadId,
+                    comments: data.comments.map( ( comment ) => ( { commentId: comment.commentId, createdAt: new Date() } ) ) // Should be set on the server side.
+                } );
+            },
+
+            getCommentThread( data ) {
+                console.log( 'Getting comment thread', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should resolve with the comment thread data.
+                return Promise.resolve( {
+                    threadId: data.threadId,
+                    comments: [
+                        {
+                            commentId: 'comment-1',
+                            authorId: 'user-2',
+                            content: '<p>Are we sure we want to use a made-up disorder name?</p>',
+                            createdAt: new Date(),
+                            attributes: {}
+                        }
+                    ],
+                    // It defines the value on which the comment has been created initially.
+                    // If it is empty it will be set based on the comment marker.
+                    context: {
+                        type: 'text',
+                        value: 'Bilingual Personality Disorder'
+                    },
+                    unlinkedAt: null,
+                    resolvedAt: null,
+                    resolvedBy: null,
+                    attributes: {},
+                    isFromAdapter: true
+                } );
+            },
+
+            updateCommentThread( data ) {
+                console.log( 'Comment thread updated', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve();
+            },
+
+            resolveCommentThread( data ) {
+                console.log( 'Comment thread resolved', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve( {
+                    resolvedAt: new Date(), // Should be set on the server side.
+                    resolvedBy: usersPlugin.me.id // Should be set on the server side.
+                } );
+            },
+
+            reopenCommentThread( data ) {
+                console.log( 'Comment thread reopened', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve();
+            },
+
+            removeCommentThread( data ) {
+                console.log( 'Comment thread removed', data );
+
+                // Write a request to your database here. The returned `Promise`
+                // should be resolved when the request has finished.
+                return Promise.resolve();
+            }
+
+        };
+    }
+}
+/**
+ * The `TrackChangesIntegration` lets you synchronize suggestions added to the document with your data source (e.g. a database).
+ *
+ * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/track-changes/track-changes-integration.html.
+ */
+class TrackChangesIntegration extends Plugin {
+    static get requires() {
+        return [ 'TrackChanges', 'UsersIntegration' ];
+    }
+
+    static get pluginName() {
+        return 'TrackChangesIntegration';
+    }
+
+    init() {
+        const trackChangesPlugin = this.editor.plugins.get( 'TrackChanges' );
+
+        // Set the adapter to the `TrackChanges#adapter` property.
+        trackChangesPlugin.adapter = {
+            getSuggestion: suggestionId => {
+                console.log( 'Getting suggestion', suggestionId );
+
+                // Write a request to your database here.
+                // The returned `Promise` should be resolved with the suggestion
+                // data object when the request has finished.
+                switch ( suggestionId ) {
+                    case 'suggestion-1':
+                        return Promise.resolve( {
+                            id: suggestionId,
+                            type: 'insertion',
+                            authorId: 'user-2',
+                            createdAt: new Date(),
+                            data: null,
+                            attributes: {}
+                        } );
+                    case 'suggestion-2':
+                        return Promise.resolve( {
+                            id: suggestionId,
+                            type: 'deletion',
+                            authorId: 'user-1',
+                            createdAt: new Date(),
+                            data: null,
+                            attributes: {}
+                        } );
+                    case 'suggestion-3':
+                        return Promise.resolve( {
+                            id: 'suggestion-3',
+                            type: 'attribute:bold|ci1tcnk0lkep',
+                            authorId: 'user-1',
+                            createdAt: new Date( 2019, 2, 8, 10, 2, 7 ),
+                            data: {
+                                key: 'bold',
+                                oldValue: null,
+                                newValue: true
+                            },
+                            attributes: {
+                                groupId: 'e29adbb2f3963e522da4d2be03bc5345f'
+                            }
+                        } );
+                }
+            },
+
+            addSuggestion: suggestionData => {
+                console.log( 'Suggestion added', suggestionData );
+
+                // Write a request to your database here.
+                // The returned `Promise` should be resolved when the request
+                // has finished. When the promise resolves with the suggestion data
+                // object, it will update the editor suggestion using the provided data.
+                return Promise.resolve( {
+                    createdAt: new Date()       // Should be set on the server side.
+                } );
+            },
+
+            updateSuggestion: ( id, suggestionData ) => {
+                console.log( 'Suggestion updated', id, suggestionData );
+
+                // Write a request to your database here.
+                // The returned `Promise` should be resolved when the request
+                // has finished.
+                return Promise.resolve();
+            }
+        };
+
+        // In order to load comments added to suggestions, you
+        // should also integrate the comments adapter.
+    }
+}
+
+/**
+ * The `RevisionHistoryIntegration` lets you synchronize named revisions in the document with your data source (e.g. a database).
+ *
+ * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/revision-history/revision-history-integration.html.
+ */
+class RevisionHistoryIntegration extends Plugin {}
+
+// Application data will be available under a global variable `appData`.
+const appData = {
+    // Users data.
+    users: [
+        {
+            id: 'user-1',
+            name: 'Mex Haddox'
+        },
+        {
+            id: 'user-2',
+            name: 'Zee Croce'
+        }
+    ],
+
+    // The ID of the current user.
+    userId: 'user-1',
+
+    // Comment threads data.
+    commentThreads: [
+        {
+            threadId: 'thread-1',
+            comments: [
+                {
+                    commentId: 'comment-1',
+                    authorId: 'user-1',
+                    content: '<p>Are we sure we want to use a made-up disorder name?</p>',
+                    createdAt: new Date( '09/20/2018 14:21:53' ),
+                    attributes: {}
+                },
+                {
+                    commentId: 'comment-2',
+                    authorId: 'user-2',
+                    content: '<p>Why not?</p>',
+                    createdAt: new Date( '09/21/2018 08:17:01' ),
+                    attributes: {}
+                }
+            ],
+            context: {
+                type: 'text',
+                value: 'Bilingual Personality Disorder'
+            },
+            unlinkedAt: null,
+            resolvedAt: null,
+            resolvedBy: null,
+            attributes: {}
+        }
+    ],
+
+    // Editor initial data.
+    initialData:
+        `<h2>
+            <comment-start name="thread-1"></comment-start>
+            Bilingual Personality Disorder
+            <comment-end name="thread-1"></comment-end>
+        </h2>
+        <p>
+            This may be the first time you hear about this
+            <suggestion-start name="insertion:suggestion-1:user-2"></suggestion-start>
+            made-up<suggestion-end name="insertion:suggestion-1:user-2"></suggestion-end>
+            disorder but it actually is not that far from the truth.
+            As recent studies show, the language you speak has more effects on you than you realize.
+            According to the studies, the language a person speaks affects their cognition,
+            <suggestion-start name="deletion:suggestion-2:user-1"></suggestion-start>
+            feelings, <suggestion-end name="deletion:suggestion-2:user-1"></suggestion-end>
+            behavior, emotions and hence <strong>their personality</strong>.
+        </p>
+        <p>
+            This shouldn’t come as a surprise
+            <a href="https://en.wikipedia.org/wiki/Lateralization_of_brain_function">since we already know</a>
+            that different regions of the brain become more active depending on the activity.
+            The structure, information and especially
+            <suggestion-start name="attribute:bold|ci1tcnk0lkep:suggestion-3:user-1"></suggestion-start><strong>the
+            culture of languages<suggestion-end name="attribute:bold|ci1tcnk0lkep:suggestion-3:user-1"></strong></suggestion-end>
+            varies substantially
+            and the language a person speaks is an essential element of daily life.
+        </p>`
+};
+
 
 export default function App() {
-	const editorPresenceRef = useRef(null);
 	const editorContainerRef = useRef(null);
 	const editorRef = useRef(null);
 	const editorAnnotationsRef = useRef(null);
@@ -101,13 +418,6 @@ export default function App() {
 
 		return () => setIsLayoutReady(false);
 	}, []);
-
-	// Configuration de l'utilisateur
-	const currentUser = {
-		id: 'user-123',
-		name: 'John Doe',        // Remplacez par le nom réel de l'utilisateur
-		// avatar: 'url-avatar'     // Optionnel
-	  };
 
 	const editorConfig = {
 		toolbar: {
@@ -150,7 +460,6 @@ export default function App() {
 			Base64UploadAdapter,
 			BlockQuote,
 			Bold,
-			CloudServices,
 			Code,
 			CodeBlock,
 			Comments,
@@ -177,12 +486,11 @@ export default function App() {
 			LinkImage,
 			List,
 			ListProperties,
+			Markdown,
+			MediaEmbed,
+			Mention,
 			Paragraph,
-			PresenceList,
-			RealTimeCollaborativeComments,
-			RealTimeCollaborativeEditing,
-			RealTimeCollaborativeRevisionHistory,
-			RealTimeCollaborativeTrackChanges,
+			PasteFromOffice,
 			RevisionHistory,
 			SelectAll,
 			SpecialCharacters,
@@ -204,23 +512,21 @@ export default function App() {
 			Underline,
 			Undo
 		],
+		extraPlugins: [UsersIntegration, CommentsIntegration, TrackChangesIntegration, RevisionHistoryIntegration],
 		balloonToolbar: ['comment', '|', 'bold', 'italic', '|', 'link', 'insertImage', '|', 'bulletedList', 'numberedList'],
-		cloudServices: {
-			tokenUrl: CLOUD_SERVICES_TOKEN_URL,
-			webSocketUrl: CLOUD_SERVICES_WEBSOCKET_URL
-		},
-		collaboration: {
-			channelId: UNIQUE_CHANNEL_PER_DOCUMENT,
-			user: currentUser,
-			// user: `Gilles ${Math.floor(Math.random() * 1000)}`
-		},
 		comments: {
 			editorConfig: {
-				extraPlugins: [Autoformat, Bold, Italic, List]
-			},
-			user: currentUser,
-			trackChanges: {
-				userName: currentUser.name,
+				extraPlugins: [Autoformat, Bold, Italic, List, Mention],
+				mention: {
+					feeds: [
+						{
+							marker: '@',
+							feed: [
+								/* See: https://ckeditor.com/docs/ckeditor5/latest/features/mentions.html#comments-with-mentions */
+							]
+						}
+					]
+				}
 			}
 		},
 		heading: {
@@ -280,9 +586,7 @@ export default function App() {
 				'resizeImage'
 			]
 		},
-		initialData:
-			'<h2>Congratulations on setting up CKEditor 5! 🎉</h2>\n<p>\n    You\'ve successfully created a CKEditor 5 project. This powerful text editor will enhance your application, enabling rich text editing\n    capabilities that are customizable and easy to use.\n</p>\n<h3>What\'s next?</h3>\n<ol>\n    <li>\n        <strong>Integrate into your app</strong>: time to bring the editing into your application. Take the code you created and add to your\n        application.\n    </li>\n    <li>\n        <strong>Explore features:</strong> Experiment with different plugins and toolbar options to discover what works best for your needs.\n    </li>\n    <li>\n        <strong>Customize your editor:</strong> Tailor the editor\'s configuration to match your application\'s style and requirements. Or even\n        write your plugin!\n    </li>\n</ol>\n<p>\n    Keep experimenting, and don\'t hesitate to push the boundaries of what you can achieve with CKEditor 5. Your feedback is invaluable to us\n    as we strive to improve and evolve. Happy editing!\n</p>\n<h3>Helpful resources</h3>\n<ul>\n    <li>📝 <a href="https://orders.ckeditor.com/trial/premium-features">Trial sign up</a>,</li>\n    <li>📕 <a href="https://ckeditor.com/docs/ckeditor5/latest/installation/index.html">Documentation</a>,</li>\n    <li>⭐️ <a href="https://github.com/ckeditor/ckeditor5">GitHub</a> (star us if you can!),</li>\n    <li>🏠 <a href="https://ckeditor.com">CKEditor Homepage</a>,</li>\n    <li>🧑‍💻 <a href="https://ckeditor.com/ckeditor-5/demo/">CKEditor 5 Demos</a>,</li>\n</ul>\n<h3>Need help?</h3>\n<p>\n    See this text, but the editor is not starting up? Check the browser\'s console for clues and guidance. It may be related to an incorrect\n    license key if you use premium features or another feature-related requirement. If you cannot make it work, file a GitHub issue, and we\n    will help as soon as possible!\n</p>\n',
-		language: 'fr',
+		initialData: appData.initialData,
 		licenseKey: LICENSE_KEY,
 		link: {
 			addTargetToExternalLinks: true,
@@ -304,34 +608,33 @@ export default function App() {
 				reversed: true
 			}
 		},
+		mention: {
+			feeds: [
+				{
+					marker: '@',
+					feed: [
+						/* See: https://ckeditor.com/docs/ckeditor5/latest/features/mentions.html */
+					]
+				}
+			]
+		},
 		menuBar: {
 			isVisible: true
 		},
 		placeholder: 'Type or paste your content here!',
-		presenceList: {
-			container: editorPresenceRef.current
-		},
-		// Configuration pour le suivi des modifications
-		trackChanges: {
-			user: currentUser,
-			userName: currentUser.name
-		},
 		revisionHistory: {
 			editorContainer: editorContainerRef.current,
 			viewerContainer: editorRevisionHistoryRef.current,
 			viewerEditorElement: editorRevisionHistoryEditorRef.current,
 			viewerSidebarContainer: editorRevisionHistorySidebarRef.current,
-			resumeUnsavedRevision: true,
-			user: currentUser,
-	        userName: currentUser.name
+			resumeUnsavedRevision: true
 		},
 		sidebar: {
 			container: editorAnnotationsRef.current
 		},
 		table: {
 			contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
-		},
-		translations: [translations, premiumFeaturesTranslations]
+		}
 	};
 
 	configUpdateAlert(editorConfig);
@@ -339,7 +642,6 @@ export default function App() {
 	return (
 		<div>
 			<div className="main-container">
-				<div className="presence" ref={editorPresenceRef}></div>
 				<div className="editor-container editor-container_classic-editor editor-container_include-annotations" ref={editorContainerRef}>
 					<div className="editor-container__editor-wrapper">
 						<div className="editor-container__editor">
@@ -388,18 +690,6 @@ function configUpdateAlert(config) {
 
 	if (!isModifiedByUser(config.licenseKey, '<YOUR_LICENSE_KEY>')) {
 		valuesToUpdate.push('LICENSE_KEY');
-	}
-
-	if (!isModifiedByUser(config.collaboration?.channelId, '<YOUR_UNIQUE_CHANNEL_PER_DOCUMENT>')) {
-		valuesToUpdate.push('UNIQUE_CHANNEL_PER_DOCUMENT');
-	}
-
-	if (!isModifiedByUser(config.cloudServices?.tokenUrl, '<YOUR_CLOUD_SERVICES_TOKEN_URL>')) {
-		valuesToUpdate.push('CLOUD_SERVICES_TOKEN_URL');
-	}
-
-	if (!isModifiedByUser(config.cloudServices?.webSocketUrl, '<YOUR_CLOUD_SERVICES_WEBSOCKET_URL>')) {
-		valuesToUpdate.push('CLOUD_SERVICES_WEBSOCKET_URL');
 	}
 
 	if (valuesToUpdate.length) {
