@@ -72,7 +72,7 @@ import './App.css';
  * Please update the following values with your actual tokens.
  * Instructions on how to obtain them: https://ckeditor.com/docs/trial/latest/guides/real-time/quick-start.html
  */
-const LICENSE_KEY = 'NlJqV3B3ZjNNa3pyNXZCS0pjWVBCNkFNUm95aHE2bkpDYkE0amw1eUtRMi9QOVhZcXZicFdjNGpvQmVBVFE9PS1NakF5TkRFeU1EUT0=';
+const LICENSE_KEY = 'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3MzQ5OTgzOTksImp0aSI6ImUyOGRjYzg3LTA4MDItNGRkZC1iYzk2LWY3OGE1N2I5ZjQ4NyIsInVzYWdlRW5kcG9pbnQiOiJodHRwczovL3Byb3h5LWV2ZW50LmNrZWRpdG9yLmNvbSIsImRpc3RyaWJ1dGlvbkNoYW5uZWwiOlsiY2xvdWQiLCJkcnVwYWwiLCJzaCJdLCJ3aGl0ZUxhYmVsIjp0cnVlLCJsaWNlbnNlVHlwZSI6InRyaWFsIiwiZmVhdHVyZXMiOlsiKiJdLCJ2YyI6IjU4MThlOGQ2In0.y6HvUyN1r6nlMwtDwRT-mW65ii7KCLtULXK2t70WohnI7ESB7ns08iqt1LP1FdciNBgm_LMu1l7c0lVhB_bD9Q';
 
 /**
  * The `UsersIntegration` lets you manage user data and permissions.
@@ -103,11 +103,6 @@ class UsersIntegration extends Plugin {
     }
 }
 
-/**
- * The `CommentsIntegration` lets you synchronize comments in the document with your data source (e.g. a database).
- *
- * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/comments/comments-integration.html.
- */
 class CommentsIntegration extends Plugin {
     static get requires() {
         return [ 'CommentsRepository', 'UsersIntegration' ];
@@ -188,7 +183,7 @@ class CommentsIntegration extends Plugin {
                     resolvedBy: null,
                     attributes: {},
                     isFromAdapter: true
-                } );
+                });
             },
 
             updateCommentThread( data ) {
@@ -227,13 +222,14 @@ class CommentsIntegration extends Plugin {
             }
 
         };
+
+        // Load the comment threads data.
+        for ( const commentThread of appData.commentThreads ) {
+            commentsRepositoryPlugin.addCommentThread( commentThread );
+        }
     }
 }
-/**
- * The `TrackChangesIntegration` lets you synchronize suggestions added to the document with your data source (e.g. a database).
- *
- * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/track-changes/track-changes-integration.html.
- */
+
 class TrackChangesIntegration extends Plugin {
     static get requires() {
         return [ 'TrackChanges', 'UsersIntegration' ];
@@ -318,12 +314,6 @@ class TrackChangesIntegration extends Plugin {
     }
 }
 
-/**
- * The `RevisionHistoryIntegration` lets you synchronize named revisions in the document with your data source (e.g. a database).
- *
- * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/revision-history/revision-history-integration.html.
- */
-// A plugin that introduces the adapter.
 class RevisionHistoryIntegration extends Plugin {
     static get pluginName() {
         return 'RevisionHistoryIntegration';
