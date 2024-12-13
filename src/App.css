@@ -14,6 +14,10 @@
 	margin-right: auto;
 }
 
+/* .main-container .presence {
+	margin-bottom: 8px;
+} */
+
 .ck-content {
 	font-family: 'Lato';
 	line-height: 1.6;
@@ -23,6 +27,10 @@
 .editor-container__editor-wrapper {
 	display: flex;
 	width: fit-content;
+}
+
+.editor-container_include-outline .editor-container__editor .ck.ck-editor__editable {
+	margin-left: 0;
 }
 
 .editor-container_include-annotations .editor-container__editor .ck.ck-editor__editable {
@@ -41,7 +49,7 @@
 	margin-left: 10px;
 	margin-right: 10px;
 }
-
+/* 
 .revision-history {
 	display: none;
 }
@@ -64,4 +72,4 @@
 
 .revision-history__wrapper .revision-history__sidebar .ck-revision-history-sidebar {
 	height: 100%;
-}
+} */

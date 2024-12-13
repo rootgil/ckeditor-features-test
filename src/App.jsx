@@ -1,18 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
-
 import {
 	ClassicEditor,
-	Plugin,
-	AccessibilityHelp,
 	Autoformat,
 	AutoImage,
 	AutoLink,
 	Autosave,
-	BalloonToolbar,
-	Base64UploadAdapter,
 	BlockQuote,
 	Bold,
+	CKBox,
+	CKBoxImageEdit,
+	CloudServices,
 	Code,
 	CodeBlock,
 	Essentials,
@@ -38,12 +36,11 @@ import {
 	LinkImage,
 	List,
 	ListProperties,
-	Markdown,
 	MediaEmbed,
 	Mention,
 	Paragraph,
 	PasteFromOffice,
-	SelectAll,
+	PictureEditing,
 	SpecialCharacters,
 	SpecialCharactersArrows,
 	SpecialCharactersCurrency,
@@ -59,510 +56,50 @@ import {
 	TextTransformation,
 	TodoList,
 	Underline,
-	Undo
 } from 'ckeditor5';
-import { Comments, RevisionHistory, TrackChanges, TrackChangesData } from 'ckeditor5-premium-features';
+import {
+	CaseChange,
+	Comments,
+	DocumentOutline,
+	ExportPdf,
+	ExportWord,
+	ImportWord,
+	PasteFromOfficeEnhanced,
+	PresenceList,
+	RealTimeCollaborativeComments,
+	RealTimeCollaborativeEditing,
+	RealTimeCollaborativeRevisionHistory,
+	RealTimeCollaborativeTrackChanges,
+	RevisionHistory,
+	SlashCommand,
+	TableOfContents,
+	Template,
+	TrackChanges,
+	TrackChangesData
+} from 'ckeditor5-premium-features';
 
 import 'ckeditor5/ckeditor5.css';
 import 'ckeditor5-premium-features/ckeditor5-premium-features.css';
 
 import './App.css';
 
-/**
- * Please update the following values with your actual tokens.
- * Instructions on how to obtain them: https://ckeditor.com/docs/trial/latest/guides/real-time/quick-start.html
- */
-const LICENSE_KEY = 'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3MzQ5OTgzOTksImp0aSI6ImUyOGRjYzg3LTA4MDItNGRkZC1iYzk2LWY3OGE1N2I5ZjQ4NyIsInVzYWdlRW5kcG9pbnQiOiJodHRwczovL3Byb3h5LWV2ZW50LmNrZWRpdG9yLmNvbSIsImRpc3RyaWJ1dGlvbkNoYW5uZWwiOlsiY2xvdWQiLCJkcnVwYWwiLCJzaCJdLCJ3aGl0ZUxhYmVsIjp0cnVlLCJsaWNlbnNlVHlwZSI6InRyaWFsIiwiZmVhdHVyZXMiOlsiKiJdLCJ2YyI6IjU4MThlOGQ2In0.y6HvUyN1r6nlMwtDwRT-mW65ii7KCLtULXK2t70WohnI7ESB7ns08iqt1LP1FdciNBgm_LMu1l7c0lVhB_bD9Q';
+const LICENSE_KEY =
+	'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3MzQ5OTgzOTksImp0aSI6ImUyOGRjYzg3LTA4MDItNGRkZC1iYzk2LWY3OGE1N2I5ZjQ4NyIsInVzYWdlRW5kcG9pbnQiOiJodHRwczovL3Byb3h5LWV2ZW50LmNrZWRpdG9yLmNvbSIsImRpc3RyaWJ1dGlvbkNoYW5uZWwiOlsiY2xvdWQiLCJkcnVwYWwiLCJzaCJdLCJ3aGl0ZUxhYmVsIjp0cnVlLCJsaWNlbnNlVHlwZSI6InRyaWFsIiwiZmVhdHVyZXMiOlsiKiJdLCJ2YyI6IjU4MThlOGQ2In0.y6HvUyN1r6nlMwtDwRT-mW65ii7KCLtULXK2t70WohnI7ESB7ns08iqt1LP1FdciNBgm_LMu1l7c0lVhB_bD9Q';
 
 /**
- * The `UsersIntegration` lets you manage user data and permissions.
- *
- * This is an essential feature when many users work on the same document.
- *
- * To read more about it, visit the CKEditor 5 documentation: https://ckeditor.com/docs/ckeditor5/latest/features/collaboration/users.html.
+ * Unique ID that will be used to identify this document. E.g. you may use ID taken from your database.
+ * Read more: https://ckeditor.com/docs/ckeditor5/latest/api/module_collaboration-core_config-RealTimeCollaborationConfig.html
  */
-class UsersIntegration extends Plugin {
-	static get requires() {
-		return ['Users'];
-	}
+const DOCUMENT_ID = '3';
 
-	static get pluginName() {
-		return 'UsersIntegration';
-	}
-
-	init() {
-        const usersPlugin = this.editor.plugins.get( 'Users' );
-
-        // Load the users data.
-        for ( const user of appData.users ) {
-            usersPlugin.addUser( user );
-        }
-
-        // Set the current user.
-        usersPlugin.defineMe( appData.userId );
-    }
-}
-
-class CommentsIntegration extends Plugin {
-    static get requires() {
-        return [ 'CommentsRepository', 'UsersIntegration' ];
-    }
-
-    static get pluginName() {
-        return 'CommentsIntegration';
-    }
-
-    init() {
-        const commentsRepositoryPlugin = this.editor.plugins.get( 'CommentsRepository' );
-
-        // Set the adapter on the `CommentsRepository#adapter` property.
-        commentsRepositoryPlugin.adapter = {
-            addComment( data ) {
-                console.log( 'Comment added', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                // When the promise resolves with the comment data object, it
-                // will update the editor comment using the provided data.
-                return Promise.resolve( {
-                    createdAt: new Date()       // Should be set on the server side.
-                } );
-            },
-
-            updateComment( data ) {
-                console.log( 'Comment updated', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve();
-            },
-
-            removeComment( data ) {
-                console.log( 'Comment removed', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve();
-            },
-
-            addCommentThread( data ) {
-                console.log( 'Comment thread added', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve( {
-                    threadId: data.threadId,
-                    comments: data.comments.map( ( comment ) => ( { commentId: comment.commentId, createdAt: new Date() } ) ) // Should be set on the server side.
-                } );
-            },
-
-            getCommentThread( data ) {
-                console.log( 'Getting comment thread', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should resolve with the comment thread data.
-                return Promise.resolve( {
-                    threadId: data.threadId,
-                    comments: [
-                        {
-                            commentId: 'comment-1',
-                            authorId: 'user-2',
-                            content: '<p>Are we sure we want to use a made-up disorder name?</p>',
-                            createdAt: new Date(),
-                            attributes: {}
-                        }
-                    ],
-                    // It defines the value on which the comment has been created initially.
-                    // If it is empty it will be set based on the comment marker.
-                    context: {
-                        type: 'text',
-                        value: 'Bilingual Personality Disorder'
-                    },
-                    unlinkedAt: null,
-                    resolvedAt: null,
-                    resolvedBy: null,
-                    attributes: {},
-                    isFromAdapter: true
-                });
-            },
-
-            updateCommentThread( data ) {
-                console.log( 'Comment thread updated', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve();
-            },
-
-            resolveCommentThread( data ) {
-                console.log( 'Comment thread resolved', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve( {
-                    resolvedAt: new Date(), // Should be set on the server side.
-                    resolvedBy: usersPlugin.me.id // Should be set on the server side.
-                } );
-            },
-
-            reopenCommentThread( data ) {
-                console.log( 'Comment thread reopened', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve();
-            },
-
-            removeCommentThread( data ) {
-                console.log( 'Comment thread removed', data );
-
-                // Write a request to your database here. The returned `Promise`
-                // should be resolved when the request has finished.
-                return Promise.resolve();
-            }
-
-        };
-
-        // Load the comment threads data.
-        for ( const commentThread of appData.commentThreads ) {
-            commentsRepositoryPlugin.addCommentThread( commentThread );
-        }
-    }
-}
-
-class TrackChangesIntegration extends Plugin {
-    static get requires() {
-        return [ 'TrackChanges', 'UsersIntegration' ];
-    }
-
-    static get pluginName() {
-        return 'TrackChangesIntegration';
-    }
-
-    init() {
-        const trackChangesPlugin = this.editor.plugins.get( 'TrackChanges' );
-
-        // Set the adapter to the `TrackChanges#adapter` property.
-        trackChangesPlugin.adapter = {
-            getSuggestion: suggestionId => {
-                console.log( 'Getting suggestion', suggestionId );
-
-                // Write a request to your database here.
-                // The returned `Promise` should be resolved with the suggestion
-                // data object when the request has finished.
-                switch ( suggestionId ) {
-                    case 'suggestion-1':
-                        return Promise.resolve( {
-                            id: suggestionId,
-                            type: 'insertion',
-                            authorId: 'user-2',
-                            createdAt: new Date(),
-                            data: null,
-                            attributes: {}
-                        } );
-                    case 'suggestion-2':
-                        return Promise.resolve( {
-                            id: suggestionId,
-                            type: 'deletion',
-                            authorId: 'user-1',
-                            createdAt: new Date(),
-                            data: null,
-                            attributes: {}
-                        } );
-                    case 'suggestion-3':
-                        return Promise.resolve( {
-                            id: 'suggestion-3',
-                            type: 'attribute:bold|ci1tcnk0lkep',
-                            authorId: 'user-1',
-                            createdAt: new Date( 2019, 2, 8, 10, 2, 7 ),
-                            data: {
-                                key: 'bold',
-                                oldValue: null,
-                                newValue: true
-                            },
-                            attributes: {
-                                groupId: 'e29adbb2f3963e522da4d2be03bc5345f'
-                            }
-                        } );
-                }
-            },
-
-            addSuggestion: suggestionData => {
-                console.log( 'Suggestion added', suggestionData );
-
-                // Write a request to your database here.
-                // The returned `Promise` should be resolved when the request
-                // has finished. When the promise resolves with the suggestion data
-                // object, it will update the editor suggestion using the provided data.
-                return Promise.resolve( {
-                    createdAt: new Date()       // Should be set on the server side.
-                } );
-            },
-
-            updateSuggestion: ( id, suggestionData ) => {
-                console.log( 'Suggestion updated', id, suggestionData );
-
-                // Write a request to your database here.
-                // The returned `Promise` should be resolved when the request
-                // has finished.
-                return Promise.resolve();
-            }
-        };
-
-        // In order to load comments added to suggestions, you
-        // should also integrate the comments adapter.
-    }
-}
-
-class RevisionHistoryIntegration extends Plugin {
-    static get pluginName() {
-        return 'RevisionHistoryIntegration';
-    }
-
-    static get requires() {
-        return [ 'RevisionHistory' ];
-    }
-
-    async init() {
-        const revisionHistory = this.editor.plugins.get( 'RevisionHistory' );
-
-        revisionHistory.adapter = {
-            getRevision: ( { revisionId } ) => {
-                return this._findRevision( revisionId );
-            },
-            updateRevisions: revisionsData => {
-                const documentData = this.editor.getData();
-
-                // This should be an asynchronous request to your database
-                // that saves `revisionsData` and `documentData`.
-                //
-                // The document data should be saved each time a revision is saved.
-                //
-                // `revisionsData` is an array with objects,
-                // where each object contains updated and new revisions.
-                //
-                // See the API reference for `RevisionHistoryAdapter` to learn
-                // how to correctly integrate the feature with your application.
-                //
-                return Promise.resolve();
-            }
-        };
-
-        // Add the revisions data for existing revisions.
-        const revisionsData = await this._fetchRevisionsData();
-
-        for ( const revisionData of revisionsData ) {
-            revisionHistory.addRevisionData( revisionData );
-        }
-    }
-
-    async _findRevision( revisionId ) {
-        // Get the revision data based on its ID.
-        // This should be an asynchronous request to your database.
-        return Promise.resolve( revisions.find( revision => revision.id === revisionId ) );
-    }
-
-    async _fetchRevisionsData() {
-        // Get a list of all revisions.
-        // This should be an asynchronous call to your database.
-        //
-        // Note that the revision list should not contain the `diffData` property.
-        // The `diffData` property may be big and will be fetched on demand by `adapter.getRevision()`.
-        return Promise.resolve(revisions.map(revision => ({ ...revision, diffData: undefined })));
-    }
-}
-
-// Create a new plugin that will handle the autosave logic.
-class RevisionHistoryAutosaveIntegration extends Plugin {
-    init() {
-        this._saveAfter = 10; // Create a new revision after 100 saves.
-        this._autosaveCount = 1; // Current autosave counter.
-        this._lastCreatedAt = null; // Revision `createdAt` value, when the revision was last autosaved.
-    }
-
-    async autosave() {
-        const revisionTracker = this.editor.plugins.get( 'RevisionTracker' );
-        const currentRevision = revisionTracker.currentRevision;
-
-        if ( currentRevision.createdAt > this._lastCreatedAt ) {
-            // Revision was saved or updated in the meantime by a different source (not autosave).
-            // Reset the counter.
-            this._autosaveCount = 1;
-        }
-
-        if ( this._autosaveCount === this._saveAfter ) {
-            // We reached the count. Save all changes as a new revision. Reset the counter.
-            await revisionTracker.saveRevision();
-
-            this._autosaveCount = 1;
-            this._lastCreatedAt = currentRevision.createdAt;
-        } else {
-            // Try updating the "current revision" with the new document changes.
-            // If there are any new changes, the `createdAt` property will change its value.
-            // Do not raise the counter, if the revision has not been updated!
-            await revisionTracker.update();
-
-            if ( currentRevision.createdAt > this._lastCreatedAt ) {
-                this._autosaveCount++;
-                this._lastCreatedAt = currentRevision.createdAt;
-            }
-        }
-
-        return true;
-    }
-}
-
-// Revisions data will be available under a global variable `revisions`.
-const revisions = [
-    {
-        "id": "initial",
-        "name": "Initial revision",
-        "creatorId": "user-1",
-        "authorsIds": [ "user-1" ],
-        "diffData": {
-            "main": {
-                "insertions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ………… by and between The Lower Shelf, the “Publisher”, and …………, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him/herself and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]},{"name":"p","attributes":[],"children":["Publishing formats are enumerated in Appendix A."]}]',
-                "deletions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ………… by and between The Lower Shelf, the “Publisher”, and …………, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him/herself and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]},{"name":"p","attributes":[],"children":["Publishing formats are enumerated in Appendix A."]}]'
-            }
-        },
-        "createdAt": "2024-05-27T13:22:59.077Z",
-        "attributes": {},
-        "fromVersion": 1,
-        "toVersion": 1
-    },
-    {
-        "id": "e6f80e6be6ee6057fd5a449ab13fba25d",
-        "name": "Updated with the actual data",
-        "creatorId": "user-1",
-        "authorsIds": [ "user-1" ],
-        "diffData": {
-            "main": {
-                "insertions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ",{"name":"revision-start","attributes":[["name","insertion:user-1:0"]],"children":[]},"1st",{"name":"revision-end","attributes":[["name","insertion:user-1:0"]],"children":[]}," ",{"name":"revision-start","attributes":[["name","insertion:user-1:1"]],"children":[]},"June 2020 ",{"name":"revision-end","attributes":[["name","insertion:user-1:1"]],"children":[]},"by and between The Lower Shelf, the “Publisher”, and ",{"name":"revision-start","attributes":[["name","insertion:user-1:2"]],"children":[]},"John Smith",{"name":"revision-end","attributes":[["name","insertion:user-1:2"]],"children":[]},", the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]',
-                "deletions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of ",{"name":"revision-start","attributes":[["name","deletion:user-1:0"]],"children":[]},"…………",{"name":"revision-end","attributes":[["name","deletion:user-1:0"]],"children":[]}," by and between The Lower Shelf, the “Publisher”, and ",{"name":"revision-start","attributes":[["name","deletion:user-1:1"]],"children":[]},"…………",{"name":"revision-end","attributes":[["name","deletion:user-1:1"]],"children":[]},", the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him",{"name":"revision-start","attributes":[["name","deletion:user-1:2"]],"children":[]},"/herself",{"name":"revision-end","attributes":[["name","deletion:user-1:2"]],"children":[]}," and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature.",{"name":"revision-start","attributes":[["name","deletion:user-1:3"]],"children":[]}]},{"name":"p","attributes":[],"children":["Publishing formats are enumerated in Appendix A.",{"name":"revision-end","attributes":[["name","deletion:user-1:3"]],"children":[]}]}]'
-            }
-        },
-        "createdAt": "2024-05-27T13:23:52.553Z",
-        "attributes": {},
-        "fromVersion": 1,
-        "toVersion": 20
-    },
-    {
-        "id": "e6590c50ccbc86acacb7d27231ad32064",
-        "name": "Inserted logo",
-        "creatorId": "user-1",
-        "authorsIds": [ "user-1" ],
-        "diffData": {
-            "main": {
-                "insertions": '[{"name":"figure","attributes":[["data-revision-start-before","insertion:user-1:0"],["class","image"]],"children":[{"name":"img","attributes":[["src","https://ckeditor.com/docs/ckeditor5/latest/assets/img/revision-history-demo.png"]],"children":[]}]},{"name":"h1","attributes":[],"children":[{"name":"revision-end","attributes":[["name","insertion:user-1:0"]],"children":[]},"PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]',
-                "deletions": '[{"name":"h1","attributes":[["data-revision-start-before","deletion:user-1:0"]],"children":[{"name":"revision-end","attributes":[["name","deletion:user-1:0"]],"children":[]},"PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]'
-            }
-        },
-        "createdAt": "2024-05-27T13:26:39.252Z",
-        "attributes": {},
-        "fromVersion": 20,
-        "toVersion": 24
-    },
-    // An empty current revision.
-    {
-        "id": "egh91t5jccbi894cacxx7dz7t36aj3k021",
-        "name": null,
-        "creatorId": null,
-        "authorsIds": [],
-        "diffData": {
-            "main": {
-                "insertions": '[{"name":"figure","attributes":[["class","image"]],"children":[{"name":"img","attributes":[["src","https://ckeditor.com/docs/ckeditor5/latest/assets/img/revision-history-demo.png"]],"children":[]}]},{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]',
-                "deletions": '[{"name":"h1","attributes":[],"children":["PUBLISHING AGREEMENT"]},{"name":"h3","attributes":[],"children":["Introduction"]},{"name":"p","attributes":[],"children":["This publishing contract, the “contract”, is entered into as of 1st June 2020 by and between The Lower Shelf, the “Publisher”, and John Smith, the “Author”."]},{"name":"h3","attributes":[],"children":["Grant of Rights"]},{"name":"p","attributes":[],"children":["The Author grants the Publisher full right and title to the following, in perpetuity:"]},{"name":"ul","attributes":[],"children":[{"name":"li","attributes":[],"children":["To publish, sell, and profit from the listed works in all languages and formats in existence today and at any point in the future."]},{"name":"li","attributes":[],"children":["To create or devise modified, abridged, or derivative works based on the works listed."]},{"name":"li","attributes":[],"children":["To allow others to use the listed works at their discretion, without providing additional compensation to the Author."]}]},{"name":"p","attributes":[],"children":["These rights are granted by the Author on behalf of him and their successors, heirs, executors, and any other party who may attempt to lay claim to these rights at any point now or in the future."]},{"name":"p","attributes":[],"children":["Any rights not granted to the Publisher above remain with the Author."]},{"name":"p","attributes":[],"children":["The rights granted to the Publisher by the Author shall not be constrained by geographic territories and are considered global in nature."]}]'
-            }
-        },
-        "createdAt": "2024-05-27T13:26:39.252Z",
-        "attributes": {},
-        "fromVersion": 24,
-        "toVersion": 24
-    }
-];
-
-
-// Application data will be available under a global variable `appData`.
-const appData = {
-    // Users data.
-    users: [
-        {
-            id: 'user-1',
-            name: 'Mex Haddox'
-        },
-        {
-            id: 'user-2',
-            name: 'Zee Croce'
-        }
-    ],
-
-    // The ID of the current user.
-    userId: 'user-1',
-
-    // Comment threads data.
-    commentThreads: [
-        {
-            threadId: 'thread-1',
-            comments: [
-                {
-                    commentId: 'comment-1',
-                    authorId: 'user-1',
-                    content: '<p>Are we sure we want to use a made-up disorder name?</p>',
-                    createdAt: new Date( '09/20/2018 14:21:53' ),
-                    attributes: {}
-                },
-                {
-                    commentId: 'comment-2',
-                    authorId: 'user-2',
-                    content: '<p>Why not?</p>',
-                    createdAt: new Date( '09/21/2018 08:17:01' ),
-                    attributes: {}
-                }
-            ],
-            context: {
-                type: 'text',
-                value: 'Bilingual Personality Disorder'
-            },
-            unlinkedAt: null,
-            resolvedAt: null,
-            resolvedBy: null,
-            attributes: {}
-        }
-    ],
-
-    // Editor initial data.
-    initialData:
-        `<h2>
-            <comment-start name="thread-1"></comment-start>
-            Bilingual Personality Disorder
-            <comment-end name="thread-1"></comment-end>
-        </h2>
-        <p>
-            This may be the first time you hear about this
-            <suggestion-start name="insertion:suggestion-1:user-2"></suggestion-start>
-            made-up<suggestion-end name="insertion:suggestion-1:user-2"></suggestion-end>
-            disorder but it actually is not that far from the truth.
-            As recent studies show, the language you speak has more effects on you than you realize.
-            According to the studies, the language a person speaks affects their cognition,
-            <suggestion-start name="deletion:suggestion-2:user-1"></suggestion-start>
-            feelings, <suggestion-end name="deletion:suggestion-2:user-1"></suggestion-end>
-            behavior, emotions and hence <strong>their personality</strong>.
-        </p>
-        <p>
-            This shouldn’t come as a surprise
-            <a href="https://en.wikipedia.org/wiki/Lateralization_of_brain_function">since we already know</a>
-            that different regions of the brain become more active depending on the activity.
-            The structure, information and especially
-            <suggestion-start name="attribute:bold|ci1tcnk0lkep:suggestion-3:user-1"></suggestion-start><strong>the
-            culture of languages<suggestion-end name="attribute:bold|ci1tcnk0lkep:suggestion-3:user-1"></strong></suggestion-end>
-            varies substantially
-            and the language a person speaks is an essential element of daily life.
-        </p>`
-};
-
+const CLOUD_SERVICES_TOKEN_URL =
+	'https://lux4wwpdwr7o.cke-cs.com/token/dev/6b095f72194ef900ee5210b2553c36deff1baf0e6720d7fb790d20fd2469?limit=10';
+const CLOUD_SERVICES_WEBSOCKET_URL = 'wss://lux4wwpdwr7o.cke-cs.com/ws';
 
 export default function App() {
+	const editorPresenceRef = useRef(null);
 	const editorContainerRef = useRef(null);
+	const editorOutlineRef = useRef(null);
 	const editorRef = useRef(null);
 	const editorAnnotationsRef = useRef(null);
 	const editorRevisionHistoryRef = useRef(null);
@@ -576,249 +113,339 @@ export default function App() {
 		return () => setIsLayoutReady(false);
 	}, []);
 
-	const editorConfig = {
-		toolbar: {
-			items: [
-				'undo',
-				'redo',
-				'|',
-				'revisionHistory',
-				'trackChanges',
-				'comment',
-				'|',
-				'heading',
-				'|',
-				'bold',
-				'italic',
-				'underline',
-				'|',
-				'link',
-				'insertImage',
-				'insertTable',
-				'highlight',
-				'blockQuote',
-				'codeBlock',
-				'|',
-				'bulletedList',
-				'numberedList',
-				'todoList',
-				'outdent',
-				'indent'
-			],
-			shouldNotGroupWhenFull: false
-		},
-		plugins: [
-			AccessibilityHelp,
-			Autoformat,
-			AutoImage,
-			AutoLink,
-			Autosave,
-			BalloonToolbar,
-			Base64UploadAdapter,
-			BlockQuote,
-			Bold,
-			Code,
-			CodeBlock,
-			Comments,
-			Essentials,
-			FindAndReplace,
-			Heading,
-			Highlight,
-			HorizontalLine,
-			HtmlEmbed,
-			ImageBlock,
-			ImageCaption,
-			ImageInline,
-			ImageInsert,
-			ImageInsertViaUrl,
-			ImageResize,
-			ImageStyle,
-			ImageTextAlternative,
-			ImageToolbar,
-			ImageUpload,
-			Indent,
-			IndentBlock,
-			Italic,
-			Link,
-			LinkImage,
-			List,
-			ListProperties,
-			Markdown,
-			MediaEmbed,
-			Mention,
-			Paragraph,
-			PasteFromOffice,
-			RevisionHistory,
-			SelectAll,
-			SpecialCharacters,
-			SpecialCharactersArrows,
-			SpecialCharactersCurrency,
-			SpecialCharactersEssentials,
-			SpecialCharactersLatin,
-			SpecialCharactersMathematical,
-			SpecialCharactersText,
-			Strikethrough,
-			Table,
-			TableCellProperties,
-			TableProperties,
-			TableToolbar,
-			TextTransformation,
-			TodoList,
-			TrackChanges,
-			TrackChangesData,
-			Underline,
-			Undo
-		],
-		extraPlugins: [UsersIntegration, CommentsIntegration, TrackChangesIntegration, RevisionHistoryIntegration, RevisionHistoryAutosaveIntegration],
-		autosave: {
-            save: editor => {
-                return editor.plugins.get( RevisionHistoryAutosaveIntegration ).autosave();
-            }
-        },
-		balloonToolbar: ['comment', '|', 'bold', 'italic', '|', 'link', 'insertImage', '|', 'bulletedList', 'numberedList'],
-		comments: {
+
+	const { editorConfig } = useMemo(() => {
+		if (!isLayoutReady) {
+			return {};
+		}
+
+		return {
 			editorConfig: {
-				extraPlugins: [Autoformat, Bold, Italic, List, Mention],
+				toolbar: {
+					items: [
+						'revisionHistory',
+						'trackChanges',
+						'comment',
+						'|',
+						'heading',
+						'|',
+						'bold',
+						'italic',
+						'underline',
+						'|',
+						'link',
+						'insertImage',
+						'insertTable',
+						'highlight',
+						'blockQuote',
+						'codeBlock',
+						'|',
+						'bulletedList',
+						'numberedList',
+						'todoList',
+						'outdent',
+						'indent'
+					],
+					shouldNotGroupWhenFull: false
+				},
+				plugins: [
+					Autoformat,
+					AutoImage,
+					AutoLink,
+					Autosave,
+					BlockQuote,
+					Bold,
+					// CaseChange,
+					CKBox,
+					CKBoxImageEdit,
+					CloudServices,
+					Code,
+					CodeBlock,
+					Comments,
+					// DocumentOutline,
+					Essentials,
+					ExportPdf,
+					ExportWord,
+					FindAndReplace,
+					Heading,
+					Highlight,
+					HorizontalLine,
+					HtmlEmbed,
+					ImageBlock,
+					ImageCaption,
+					ImageInline,
+					ImageInsert,
+					ImageInsertViaUrl,
+					ImageResize,
+					ImageStyle,
+					ImageTextAlternative,
+					ImageToolbar,
+					ImageUpload,
+					ImportWord,
+					Indent,
+					IndentBlock,
+					Italic,
+					Link,
+					LinkImage,
+					List,
+					ListProperties,
+					MediaEmbed,
+					Mention,
+					Paragraph,
+					// PasteFromOffice,
+					// PasteFromOfficeEnhanced,
+					PictureEditing,
+					PresenceList,
+					RealTimeCollaborativeComments,
+					RealTimeCollaborativeEditing,
+					RealTimeCollaborativeRevisionHistory,
+					RealTimeCollaborativeTrackChanges,
+					RevisionHistory,
+					// SlashCommand,
+					SpecialCharacters,
+					SpecialCharactersArrows,
+					SpecialCharactersCurrency,
+					SpecialCharactersEssentials,
+					SpecialCharactersLatin,
+					SpecialCharactersMathematical,
+					SpecialCharactersText,
+					Strikethrough,
+					Table,
+					TableCellProperties,
+					// TableOfContents,
+					TableProperties,
+					TableToolbar,
+					// Template,
+					TextTransformation,
+					TodoList,
+					TrackChanges,
+					TrackChangesData,
+					Underline
+				],
+				cloudServices: {
+					tokenUrl: () => {
+                      return  Promise.resolve("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJGdng4NEpnZTlyZ0FBVFh5aG4zOSIsInN1YiI6InVzZXItMDEiLCJ1c2VyIjp7ImVtYWlsIjoiZ2lsbGVzQGdtYWlsLmNvbSIsIm5hbWUiOiJHaWxsZXMgQUgifSwiYXV0aCI6eyJjb2xsYWJvcmF0aW9uIjp7IioiOnsicm9sZSI6IndyaXRlciJ9fSwiY2tib3giOnsicm9sZSI6InVzZXIifX0sImlhdCI6MTczMzk5MTQ3MCwiZXhwIjoxNzY1NTQ5MDcwfQ.XwuaOXZDHub4lBw4HksbmDVByA-V8FpTB52oU0_Vae8")
+                    },
+					webSocketUrl: CLOUD_SERVICES_WEBSOCKET_URL
+				},
+				collaboration: {
+					channelId: DOCUMENT_ID
+				},
+				comments: {
+					editorConfig: {
+						extraPlugins: [Autoformat, Bold, Italic, List, Mention],
+						mention: {
+							feeds: [
+								{
+									marker: '@',
+									feed: [
+										/* See: https://ckeditor.com/docs/ckeditor5/latest/features/mentions.html#comments-with-mentions */
+									]
+								}
+							]
+						}
+					}
+				},
+				documentOutline: {
+					container: editorOutlineRef.current
+				},
+				exportPdf: {
+					stylesheets: [
+						/* This path should point to application stylesheets. */
+						/* See: https://ckeditor.com/docs/ckeditor5/latest/features/converters/export-pdf.html */
+						'./App.css',
+						/* Export PDF needs access to stylesheets that style the content. */
+						'https://cdn.ckeditor.com/ckeditor5/44.0.0/ckeditor5.css',
+						'https://cdn.ckeditor.com/ckeditor5-premium-features/44.0.0/ckeditor5-premium-features.css'
+					],
+					fileName: 'export-pdf-demo.pdf',
+					converterOptions: {
+						format: 'Tabloid',
+						margin_top: '20mm',
+						margin_bottom: '20mm',
+						margin_right: '24mm',
+						margin_left: '24mm',
+						page_orientation: 'portrait'
+					}
+				},
+				exportWord: {
+					stylesheets: [
+						/* This path should point to application stylesheets. */
+						/* See: https://ckeditor.com/docs/ckeditor5/latest/features/converters/export-word.html */
+						'./App.css',
+						/* Export Word needs access to stylesheets that style the content. */
+						'https://cdn.ckeditor.com/ckeditor5/44.0.0/ckeditor5.css',
+						'https://cdn.ckeditor.com/ckeditor5-premium-features/44.0.0/ckeditor5-premium-features.css'
+					],
+					fileName: 'export-word-demo.docx',
+					converterOptions: {
+						document: {
+							orientation: 'portrait',
+							size: 'Tabloid',
+							margins: {
+								top: '20mm',
+								bottom: '20mm',
+								right: '24mm',
+								left: '24mm'
+							}
+						}
+					}
+				},
+				heading: {
+					options: [
+						{
+							model: 'paragraph',
+							title: 'Paragraph',
+							class: 'ck-heading_paragraph'
+						},
+						{
+							model: 'heading1',
+							view: 'h1',
+							title: 'Heading 1',
+							class: 'ck-heading_heading1'
+						},
+						{
+							model: 'heading2',
+							view: 'h2',
+							title: 'Heading 2',
+							class: 'ck-heading_heading2'
+						},
+						{
+							model: 'heading3',
+							view: 'h3',
+							title: 'Heading 3',
+							class: 'ck-heading_heading3'
+						},
+						{
+							model: 'heading4',
+							view: 'h4',
+							title: 'Heading 4',
+							class: 'ck-heading_heading4'
+						},
+						{
+							model: 'heading5',
+							view: 'h5',
+							title: 'Heading 5',
+							class: 'ck-heading_heading5'
+						},
+						{
+							model: 'heading6',
+							view: 'h6',
+							title: 'Heading 6',
+							class: 'ck-heading_heading6'
+						}
+					]
+				},
+				image: {
+					toolbar: [
+						'toggleImageCaption',
+						'imageTextAlternative',
+						'|',
+						'imageStyle:inline',
+						'imageStyle:wrapText',
+						'imageStyle:breakText',
+						'|',
+						'resizeImage',
+						'|',
+						'ckboxImageEdit'
+					]
+				},
+				initialData:
+					"",
+				licenseKey: LICENSE_KEY,
+				link: {
+					addTargetToExternalLinks: true,
+					defaultProtocol: 'https://',
+					decorators: {
+						toggleDownloadable: {
+							mode: 'manual',
+							label: 'Downloadable',
+							attributes: {
+								download: 'file'
+							}
+						}
+					}
+				},
+				list: {
+					properties: {
+						styles: true,
+						startIndex: true,
+						reversed: true
+					}
+				},
 				mention: {
 					feeds: [
 						{
 							marker: '@',
 							feed: [
-								/* See: https://ckeditor.com/docs/ckeditor5/latest/features/mentions.html#comments-with-mentions */
+								/* See: https://ckeditor.com/docs/ckeditor5/latest/features/mentions.html */
 							]
+						}
+					]
+				},
+				menuBar: {
+					isVisible: true
+				},
+				placeholder: 'Type or paste your content here!',
+				presenceList: {
+					container: editorPresenceRef.current
+				},
+				revisionHistory: {
+					editorContainer: editorContainerRef.current,
+					viewerContainer: editorRevisionHistoryRef.current,
+					viewerEditorElement: editorRevisionHistoryEditorRef.current,
+					viewerSidebarContainer: editorRevisionHistorySidebarRef.current,
+					resumeUnsavedRevision: true
+				},
+				sidebar: {
+					container: editorAnnotationsRef.current
+				},
+				table: {
+					contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
+				},
+				template: {
+					definitions: [
+						{
+							title: 'Introduction',
+							description: 'Simple introduction to an article',
+							icon: '<svg width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">\n    <g id="icons/article-image-right">\n        <rect id="icon-bg" width="45" height="45" rx="2" fill="#A5E7EB"/>\n        <g id="page" filter="url(#filter0_d_1_507)">\n            <path d="M9 41H36V12L28 5H9V41Z" fill="white"/>\n            <path d="M35.25 12.3403V40.25H9.75V5.75H27.7182L35.25 12.3403Z" stroke="#333333" stroke-width="1.5"/>\n        </g>\n        <g id="image">\n            <path id="Rectangle 22" d="M21.5 23C21.5 22.1716 22.1716 21.5 23 21.5H31C31.8284 21.5 32.5 22.1716 32.5 23V29C32.5 29.8284 31.8284 30.5 31 30.5H23C22.1716 30.5 21.5 29.8284 21.5 29V23Z" fill="#B6E3FC" stroke="#333333"/>\n            <path id="Vector 1" d="M24.1184 27.8255C23.9404 27.7499 23.7347 27.7838 23.5904 27.9125L21.6673 29.6268C21.5124 29.7648 21.4589 29.9842 21.5328 30.178C21.6066 30.3719 21.7925 30.5 22 30.5H32C32.2761 30.5 32.5 30.2761 32.5 30V27.7143C32.5 27.5717 32.4391 27.4359 32.3327 27.3411L30.4096 25.6268C30.2125 25.451 29.9127 25.4589 29.7251 25.6448L26.5019 28.8372L24.1184 27.8255Z" fill="#44D500" stroke="#333333" stroke-linejoin="round"/>\n            <circle id="Ellipse 1" cx="26" cy="25" r="1.5" fill="#FFD12D" stroke="#333333"/>\n        </g>\n        <rect id="Rectangle 23" x="13" y="13" width="12" height="2" rx="1" fill="#B4B4B4"/>\n        <rect id="Rectangle 24" x="13" y="17" width="19" height="2" rx="1" fill="#B4B4B4"/>\n        <rect id="Rectangle 25" x="13" y="21" width="6" height="2" rx="1" fill="#B4B4B4"/>\n        <rect id="Rectangle 26" x="13" y="25" width="6" height="2" rx="1" fill="#B4B4B4"/>\n        <rect id="Rectangle 27" x="13" y="29" width="6" height="2" rx="1" fill="#B4B4B4"/>\n        <rect id="Rectangle 28" x="13" y="33" width="16" height="2" rx="1" fill="#B4B4B4"/>\n    </g>\n    <defs>\n        <filter id="filter0_d_1_507" x="9" y="5" width="28" height="37" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">\n            <feFlood flood-opacity="0" result="BackgroundImageFix"/>\n            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>\n            <feOffset dx="1" dy="1"/>\n            <feComposite in2="hardAlpha" operator="out"/>\n            <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.29 0"/>\n            <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_507"/>\n            <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_507" result="shape"/>\n        </filter>\n    </defs>\n</svg>\n',
+							data: "<h2>Introduction</h2><p>In today's fast-paced world, keeping up with the latest trends and insights is essential for both personal growth and professional development. This article aims to shed light on a topic that resonates with many, providing valuable information and actionable advice. Whether you're seeking to enhance your knowledge, improve your skills, or simply stay informed, our comprehensive analysis offers a deep dive into the subject matter, designed to empower and inspire our readers.</p>"
 						}
 					]
 				}
 			}
-		},
-		heading: {
-			options: [
-				{
-					model: 'paragraph',
-					title: 'Paragraph',
-					class: 'ck-heading_paragraph'
-				},
-				{
-					model: 'heading1',
-					view: 'h1',
-					title: 'Heading 1',
-					class: 'ck-heading_heading1'
-				},
-				{
-					model: 'heading2',
-					view: 'h2',
-					title: 'Heading 2',
-					class: 'ck-heading_heading2'
-				},
-				{
-					model: 'heading3',
-					view: 'h3',
-					title: 'Heading 3',
-					class: 'ck-heading_heading3'
-				},
-				{
-					model: 'heading4',
-					view: 'h4',
-					title: 'Heading 4',
-					class: 'ck-heading_heading4'
-				},
-				{
-					model: 'heading5',
-					view: 'h5',
-					title: 'Heading 5',
-					class: 'ck-heading_heading5'
-				},
-				{
-					model: 'heading6',
-					view: 'h6',
-					title: 'Heading 6',
-					class: 'ck-heading_heading6'
-				}
-			]
-		},
-		image: {
-			toolbar: [
-				'toggleImageCaption',
-				'imageTextAlternative',
-				'|',
-				'imageStyle:inline',
-				'imageStyle:wrapText',
-				'imageStyle:breakText',
-				'|',
-				'resizeImage'
-			]
-		},
-		initialData: appData.initialData,
-		licenseKey: LICENSE_KEY,
-		link: {
-			addTargetToExternalLinks: true,
-			defaultProtocol: 'https://',
-			decorators: {
-				toggleDownloadable: {
-					mode: 'manual',
-					label: 'Downloadable',
-					attributes: {
-						download: 'file'
-					}
-				}
-			}
-		},
-		list: {
-			properties: {
-				styles: true,
-				startIndex: true,
-				reversed: true
-			}
-		},
-		mention: {
-			feeds: [
-				{
-					marker: '@',
-					feed: [
-						/* See: https://ckeditor.com/docs/ckeditor5/latest/features/mentions.html */
-					]
-				}
-			]
-		},
-		menuBar: {
-			isVisible: true
-		},
-		placeholder: 'Type or paste your content here!',
-		revisionHistory: {
-			editorContainer: editorContainerRef.current,
-			viewerContainer: editorRevisionHistoryRef.current,
-			viewerEditorElement: editorRevisionHistoryEditorRef.current,
-			viewerSidebarContainer: editorRevisionHistorySidebarRef.current,
-			resumeUnsavedRevision: true
-		},
-		sidebar: {
-			container: editorAnnotationsRef.current
-		},
-		table: {
-			contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
-		}
-	};
+		};
+	}, [isLayoutReady]);
 
-	configUpdateAlert(editorConfig);
+	useEffect(() => {
+		if (editorConfig) {
+			configUpdateAlert(editorConfig);
+		}
+	}, [editorConfig]);
 
 	return (
-		<div>
-			<div className="main-container">
-				<div className="editor-container editor-container_classic-editor editor-container_include-annotations" ref={editorContainerRef}>
-					<div className="editor-container__editor-wrapper">
-						<div className="editor-container__editor">
-							<div ref={editorRef}>{isLayoutReady && <CKEditor editor={ClassicEditor} config={editorConfig} />}</div>
-						</div>
-						<div className="editor-container__sidebar">
-							<div ref={editorAnnotationsRef}></div>
-						</div>
+		<div className="main-container">
+			<div className="presence" ref={editorPresenceRef}></div>
+			<div
+				className="editor-container editor-container_classic-editor editor-container_include-outline editor-container_include-annotations"
+				ref={editorContainerRef}
+			>
+				<div className="editor-container__editor-wrapper">
+					<div className="editor-container__sidebar">
+						<div ref={editorOutlineRef}></div>
+					</div>
+					<div className="editor-container__editor">
+						<div ref={editorRef}>{editorConfig && <CKEditor editor={ClassicEditor} config={editorConfig} />}</div>
+					</div>
+					<div className="editor-container__sidebar">
+						<div ref={editorAnnotationsRef}></div>
 					</div>
 				</div>
-				<div className="revision-history" ref={editorRevisionHistoryRef}>
-					<div className="revision-history__wrapper">
-						<div className="revision-history__editor" ref={editorRevisionHistoryEditorRef}></div>
-						<div className="revision-history__sidebar" ref={editorRevisionHistorySidebarRef}></div>
-					</div>
+			</div>
+			<div className="revision-history" ref={editorRevisionHistoryRef}>
+				<div className="revision-history__wrapper">
+					<div className="revision-history__editor" ref={editorRevisionHistoryEditorRef}></div>
+					<div className="revision-history__sidebar" ref={editorRevisionHistorySidebarRef}></div>
 				</div>
 			</div>
 		</div>
@@ -854,11 +481,19 @@ function configUpdateAlert(config) {
 		valuesToUpdate.push('LICENSE_KEY');
 	}
 
+	if (!isModifiedByUser(config.cloudServices?.tokenUrl, '<YOUR_CLOUD_SERVICES_TOKEN_URL>')) {
+		valuesToUpdate.push('CLOUD_SERVICES_TOKEN_URL');
+	}
+
+	if (!isModifiedByUser(config.cloudServices?.webSocketUrl, '<YOUR_CLOUD_SERVICES_WEBSOCKET_URL>')) {
+		valuesToUpdate.push('CLOUD_SERVICES_WEBSOCKET_URL');
+	}
+
 	if (valuesToUpdate.length) {
 		window.alert(
 			[
 				'Please update the following values in your editor config',
-				'in order to receive full access to the Premium Features:',
+				'to receive full access to Premium Features:',
 				'',
 				...valuesToUpdate.map(value => ` - ${value}`)
 			].join('\n')
