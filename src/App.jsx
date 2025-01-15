@@ -84,7 +84,7 @@ import 'ckeditor5-premium-features/ckeditor5-premium-features.css';
 import './App.css';
 
 const LICENSE_KEY =
-	'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3MzQ5OTgzOTksImp0aSI6ImUyOGRjYzg3LTA4MDItNGRkZC1iYzk2LWY3OGE1N2I5ZjQ4NyIsInVzYWdlRW5kcG9pbnQiOiJodHRwczovL3Byb3h5LWV2ZW50LmNrZWRpdG9yLmNvbSIsImRpc3RyaWJ1dGlvbkNoYW5uZWwiOlsiY2xvdWQiLCJkcnVwYWwiLCJzaCJdLCJ3aGl0ZUxhYmVsIjp0cnVlLCJsaWNlbnNlVHlwZSI6InRyaWFsIiwiZmVhdHVyZXMiOlsiKiJdLCJ2YyI6IjU4MThlOGQ2In0.y6HvUyN1r6nlMwtDwRT-mW65ii7KCLtULXK2t70WohnI7ESB7ns08iqt1LP1FdciNBgm_LMu1l7c0lVhB_bD9Q';
+	'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE3MzYyOTQzOTksImp0aSI6IjIzZWZkZjA0LWZlMTMtNGVhOC04NWRmLTE1MWNiM2FhNThiMiIsInVzYWdlRW5kcG9pbnQiOiJodHRwczovL3Byb3h5LWV2ZW50LmNrZWRpdG9yLmNvbSIsImRpc3RyaWJ1dGlvbkNoYW5uZWwiOlsiY2xvdWQiLCJkcnVwYWwiLCJzaCJdLCJ3aGl0ZUxhYmVsIjp0cnVlLCJsaWNlbnNlVHlwZSI6InRyaWFsIiwiZmVhdHVyZXMiOlsiKiJdLCJ2YyI6IjlhMmY3YmM5In0.s5W4lVKHdvOYo4Qnsh5Gk7BcFfTfvay3gsQgwt_7PB350y6jtcvIf7O7gSQHyP8LM1hwiuydut2Ewf-LfW2hQA';
 
 /**
  * Unique ID that will be used to identify this document. E.g. you may use ID taken from your database.
@@ -94,7 +94,7 @@ const DOCUMENT_ID = '3';
 
 const CLOUD_SERVICES_TOKEN_URL =
 	'https://lux4wwpdwr7o.cke-cs.com/token/dev/6b095f72194ef900ee5210b2553c36deff1baf0e6720d7fb790d20fd2469?limit=10';
-const CLOUD_SERVICES_WEBSOCKET_URL = 'wss://lux4wwpdwr7o.cke-cs.com/ws';
+const CLOUD_SERVICES_WEBSOCKET_URL = 'wss://565gbkz_kfq3.cke-cs.com/ws';
 
 export default function App() {
 	const editorPresenceRef = useRef(null);
@@ -106,6 +106,7 @@ export default function App() {
 	const editorRevisionHistoryEditorRef = useRef(null);
 	const editorRevisionHistorySidebarRef = useRef(null);
 	const [isLayoutReady, setIsLayoutReady] = useState(false);
+	const editorInstanceRef = useRef(null);
 
 	useEffect(() => {
 		setIsLayoutReady(true);
@@ -224,7 +225,7 @@ export default function App() {
 				],
 				cloudServices: {
 					tokenUrl: () => {
-                      return  Promise.resolve("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJGdng4NEpnZTlyZ0FBVFh5aG4zOSIsInN1YiI6InVzZXItMDEiLCJ1c2VyIjp7ImVtYWlsIjoiZ2lsbGVzQGdtYWlsLmNvbSIsIm5hbWUiOiJHaWxsZXMgQUgifSwiYXV0aCI6eyJjb2xsYWJvcmF0aW9uIjp7IioiOnsicm9sZSI6IndyaXRlciJ9fSwiY2tib3giOnsicm9sZSI6InVzZXIifX0sImlhdCI6MTczMzk5MTQ3MCwiZXhwIjoxNzY1NTQ5MDcwfQ.XwuaOXZDHub4lBw4HksbmDVByA-V8FpTB52oU0_Vae8")
+                      return  Promise.resolve("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJWbm1YQ0NqOG96QWlLSFF3OHB0QiIsInN1YiI6InVzZXItMDEiLCJ1c2VyIjp7ImVtYWlsIjoiZ2lsbGVzQGdtYWlsLmNvbSIsIm5hbWUiOiJHaWxsZXMgQUgifSwiYXV0aCI6eyJjb2xsYWJvcmF0aW9uIjp7IioiOnsicm9sZSI6IndyaXRlciJ9fSwiY2tib3giOnsicm9sZSI6InVzZXIifX0sImlhdCI6MTczNTAzNzU3MSwiZXhwIjoxNzY2NTk1MTcxfQ.BSbBP0AJ2JlWxChVpOFjIk9d0s1qG4msBuRXKOGi3VI")
                     },
 					webSocketUrl: CLOUD_SERVICES_WEBSOCKET_URL
 				},
@@ -351,7 +352,7 @@ export default function App() {
 					]
 				},
 				initialData:
-					"",
+					'<h2>Congratulations on setting up CKEditor 5! 🎉</h2>\n<p>\n\tYou\'ve successfully created a CKEditor 5 project. This powerful text editor\n\twill enhance your application, enabling rich text editing capabilities that\n\tare customizable and easy to use.\n</p>\n<h3>What\'s next?</h3>\n<ol>\n\t<li>\n\t\t<strong>Integrate into your app</strong>: time to bring the editing into\n\t\tyour application. Take the code you created and add to your application.\n\t</li>\n\t<li>\n\t\t<strong>Explore features:</strong> Experiment with different plugins and\n\t\ttoolbar options to discover what works best for your needs.\n\t</li>\n\t<li>\n\t\t<strong>Customize your editor:</strong> Tailor the editor\'s\n\t\tconfiguration to match your application\'s style and requirements. Or\n\t\teven write your plugin!\n\t</li>\n</ol>\n<p>\n\tKeep experimenting, and don\'t hesitate to push the boundaries of what you\n\tcan achieve with CKEditor 5. Your feedback is invaluable to us as we strive\n\tto improve and evolve. Happy editing!\n</p>\n<h3>Helpful resources</h3>\n<ul>\n\t<li>📝 <a href="https://portal.ckeditor.com/checkout?plan=free">Trial sign up</a>,</li>\n\t<li>📕 <a href="https://ckeditor.com/docs/ckeditor5/latest/installation/index.html">Documentation</a>,</li>\n\t<li>⭐️ <a href="https://github.com/ckeditor/ckeditor5">GitHub</a> (star us if you can!),</li>\n\t<li>🏠 <a href="https://ckeditor.com">CKEditor Homepage</a>,</li>\n\t<li>🧑‍💻 <a href="https://ckeditor.com/ckeditor-5/demo/">CKEditor 5 Demos</a>,</li>\n</ul>\n<h3>Need help?</h3>\n<p>\n\tSee this text, but the editor is not starting up? Check the browser\'s\n\tconsole for clues and guidance. It may be related to an incorrect license\n\tkey if you use premium features or another feature-related requirement. If\n\tyou cannot make it work, file a GitHub issue, and we will help as soon as\n\tpossible!\n</p>\n',
 				licenseKey: LICENSE_KEY,
 				link: {
 					addTargetToExternalLinks: true,
@@ -417,25 +418,84 @@ export default function App() {
 		};
 	}, [isLayoutReady]);
 
+
+	const [audioSrc, setAudioSrc] = useState(null);
+
 	useEffect(() => {
 		if (editorConfig) {
 			configUpdateAlert(editorConfig);
 		}
 	}, [editorConfig]);
 
+	// NEW: Function to handle text-to-speech using the Web Speech Synthesis API
+	const speakEditorContent = () => {
+		// Check if the browser supports speechSynthesis
+		if (!window.speechSynthesis) {
+			alert('Text-to-Speech is not supported in this browser.');
+			return;
+		}
+
+		// const editor = editorInstanceRef.current;
+		// if (!editor) {
+		// 	alert('Editor not ready yet.');
+		// 	return;
+		// }
+
+		// Get the full HTML content or plain text from CKEditor
+		const htmlContent = editorRef.current.getData();
+		const plainText = htmlContent.replace(/<[^>]+>/g, ''); // Simple strip of HTML tags
+
+		// Stop any current speech
+		window.speechSynthesis.cancel();
+
+		// Create an utterance
+		const utterance = new SpeechSynthesisUtterance(plainText);
+		utterance.rate = 1.0; // You can adjust speaking rate
+		utterance.pitch = 1.0; // You can adjust pitch
+		utterance.lang = 'fr-FR'; // Choose a language
+
+		// Speak
+		window.speechSynthesis.speak(utterance);
+	};
+
+	const controls = (state) => {
+
+		if(state) {
+			// Pause
+			window.speechSynthesis.pause();
+		} else {	
+			// Resume
+			window.speechSynthesis.resume();
+		}
+
+		// // Stop entirely
+		// window.speechSynthesis.cancel();
+	}
+
 	return (
 		<div className="main-container">
 			<div className="presence" ref={editorPresenceRef}></div>
+
+			{/* NEW: A button to trigger text-to-speech */}
+			<div style={{ marginBottom: '1rem', marginTop: '1rem' }}>
+				<button onClick={speakEditorContent}>🔊 Lire le contenu</button>
+				<button onClick={() => controls(true)}>Pause</button>
+				<button onClick={() => controls(false)}>Reprendre</button>
+			</div>
+
 			<div
 				className="editor-container editor-container_classic-editor editor-container_include-outline editor-container_include-annotations"
 				ref={editorContainerRef}
 			>
 				<div className="editor-container__editor-wrapper">
-					<div className="editor-container__sidebar">
+					<div className="">
 						<div ref={editorOutlineRef}></div>
 					</div>
 					<div className="editor-container__editor">
-						<div ref={editorRef}>{editorConfig && <CKEditor editor={ClassicEditor} config={editorConfig} />}</div>
+						<div ref={editorRef}>{editorConfig && <CKEditor editor={ClassicEditor} onReady={(editor) => {
+							editorRef.current = editor
+							editor.plugins.get( 'AnnotationsUIs' ).switchTo( 'narrowSidebar' )
+						}} config={editorConfig} />}</div>
 					</div>
 					<div className="editor-container__sidebar">
 						<div ref={editorAnnotationsRef}></div>

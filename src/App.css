@@ -49,7 +49,7 @@
 	margin-left: 10px;
 	margin-right: 10px;
 }
-/* 
+
 .revision-history {
 	display: none;
 }
@@ -72,4 +72,16 @@
 
 .revision-history__wrapper .revision-history__sidebar .ck-revision-history-sidebar {
 	height: 100%;
-} */
+}
+
+.editor-container__sidebar {
+    transition: min-width .4s ease-out-in;
+}
+
+.editor-container__sidebar.narrow {
+    min-width: 65px;
+}
+
+.editor-container__sidebar.hidden {
+    display: none;
+}
